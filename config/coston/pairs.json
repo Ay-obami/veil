@@ -1,0 +1,17 @@
+[
+    {
+        "name": "FLR/USDT",
+        "baseToken": "0xE0CBdD68ef23677347096158dBeA3a345bB283Ff",
+        "quoteToken": "0xFA76AC089e2A4c62c04E155382fEb5602C57F7C8"
+    },
+    {
+        "name": "BTC/USDT",
+        "baseToken": "0x5BBf0ceFb415ba681B2BDEEe7C4F0713321f1A36",
+        "quoteToken": "0xFA76AC089e2A4c62c04E155382fEb5602C57F7C8"
+    },
+    {
+        "name": "ETH/USDT",
+        "baseToken": "0xcfD07dda0eE5473434e63F734A1673B75DE2FF3E",
+        "quoteToken": "0xFA76AC089e2A4c62c04E155382fEb5602C57F7C8"
+    }
+]

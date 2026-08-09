@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/direct",
+      "destination": "https://REPLACE-WITH-YOUR-DEPLOYED-PROXY-URL/direct"
+    },
+    {
+      "source": "/state/:path*",
+      "destination": "https://REPLACE-WITH-YOUR-DEPLOYED-PROXY-URL/state/:path*"
+    },
+    {
+      "source": "/action/:path*",
+      "destination": "https://REPLACE-WITH-YOUR-DEPLOYED-PROXY-URL/action/:path*"
+    }
+  ]
+}

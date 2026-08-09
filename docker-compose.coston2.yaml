@@ -1,0 +1,15 @@
+# Docker Compose override for Coston2 deployment.
+# Usage: docker compose -f docker-compose.yaml -f docker-compose.coston2.yaml up
+services:
+  ext-proxy:
+    volumes:
+      - ./config/proxy/extension_proxy.coston2.docker.toml:/app/config/config.toml:ro
+
+  extension-tee:
+    environment:
+      - CHAIN_URL=${CHAIN_URL:-https://coston2-api.flare.network/ext/C/rpc}
+
+networks:
+  default:
+    name: ${COMPOSE_NETWORK:-veil-coston2}
+    external: false

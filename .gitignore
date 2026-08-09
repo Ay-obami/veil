@@ -1,0 +1,60 @@
+.env*
+*.env
+!*.example
+
+# Coston/Coston2 proxy configs (contain DB credentials)
+config/proxy/extension_proxy.coston.toml
+config/proxy/extension_proxy.coston.docker.toml
+config/proxy/extension_proxy.coston2.toml
+config/proxy/extension_proxy.coston2.docker.toml
+config/extension.env
+
+# Deployment state (machine-specific; deployment.json is the engine's
+# only state file, register-tee.state is its internal resume point)
+deployment/deployment.json
+deployment/register-tee.state
+deployment/logs/*.log
+
+out/
+cache/
+.DS_Store
+
+# Compiled Go binaries
+tools/start-*
+tools/allow-*
+tools/deploy-*
+tools/register-*
+tools/run-*
+tools/stress-test
+tools/test-setup
+
+# Stress-test local state (generated trader keys)
+tools/traders*.json
+
+# Generated contract bindings (produced by `veil deploy contracts`)
+tools/pkg/contracts/*/autogen.go
+tools/pkg/contracts/*/*.abi
+tools/pkg/contracts/*/*.bin
+
+docs/superpowers
+
+notes/
+
+.worktrees/
+
+# Private deployment guide (SSH, redeploy instructions)
+DEPLOYMENT.md
+
+config/**/*.log
+
+# Stress-test runtime logs
+logs/
+
+# Vercel local project link
+frontend/.vercel/
+!frontend/book-ui.png
+
+# Local deployment scratch directory
+deploy/
+# Runtime output (not source)
+results/*.log

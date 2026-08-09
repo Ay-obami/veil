@@ -1,0 +1,10 @@
+node_modules
+dist
+.vite
+.env
+.env.local
+.playwright-mcp/
+*.png
+!book-ui.png
+tsconfig.tsbuildinfo
+.vercel

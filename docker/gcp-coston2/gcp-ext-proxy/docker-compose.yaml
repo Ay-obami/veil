@@ -1,0 +1,63 @@
+# VM 1: public-facing proxy for the orderbook extension on Coston2.
+#
+# Runs on a standard GCE VM (not a Confidential VM). Exposes:
+#   - 6663 internal: receives signing requests from extension-tee. Restrict
+#                    to the extension-tee VM's IP via GCP VPC firewall.
+#   - 6664 external: public endpoint hit by Flare data providers for
+#                    availability checks and cosigning. Must be internet-
+#                    reachable (ideally behind a GCP Load Balancer with TLS).
+#
+# Deploy:
+#   1. Populate ../.env from ../.env.example (or inject via Secret Manager).
+#   2. docker compose up -d
+
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    mem_limit: 1280m
+    mem_reservation: 512m
+    command: ["redis-server", "--maxmemory", "1gb", "--maxmemory-policy", "volatile-ttl"]
+
+  redis-exporter:
+    image: bitnami/redis-exporter:latest
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      - REDIS_ADDR=redis:6379
+    ports:
+      - "127.0.0.1:9121:9121"
+
+  ext-proxy:
+    image: ${REGISTRY}/tee-proxy:${TEE_PROXY_TAG:-latest}
+    volumes:
+      - ./proxy.config.toml:/app/config/config.toml:ro
+    environment:
+      - PROXY_PRIVATE_KEY=${PROXY_PRIVATE_KEY:?PROXY_PRIVATE_KEY must be set}
+      - DIRECT_API_KEY=${DIRECT_API_KEY:?DIRECT_API_KEY must be set}
+      - INDEXER_DB_HOST=${INDEXER_DB_HOST:?INDEXER_DB_HOST must be set}
+      - INDEXER_DB_PASSWORD=${INDEXER_DB_PASSWORD:?INDEXER_DB_PASSWORD must be set}
+    ports:
+      - "${EXT_PROXY_INTERNAL_BIND:-0.0.0.0:6663}:6663"
+      - "${EXT_PROXY_EXTERNAL_BIND:-0.0.0.0:6664}:6664"
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:6663/healthy"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    labels:
+      logging: promtail
+      logging_jobname: "ext-proxy"
