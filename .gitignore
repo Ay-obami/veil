@@ -13,6 +13,7 @@ config/extension.env
 # only state file, register-tee.state is its internal resume point)
 deployment/deployment.json
 deployment/register-tee.state
+deployment/register-tee.state.bak
 deployment/logs/*.log
 
 out/
