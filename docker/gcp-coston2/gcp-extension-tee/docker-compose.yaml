@@ -1,0 +1,33 @@
+# VM 2: orderbook extension-tee on a GCP Confidential VM.
+#
+# Runs on a Confidential VM (AMD SEV-SNP or Intel TDX) so that attestation
+# works with SIMULATED_TEE=false. Signs order-matching instructions on
+# behalf of the extension.
+#
+# No public ingress; egress to the ext-proxy VM on port 6663 only.
+#
+# Deploy:
+#   1. Create a GCP Confidential VM.
+#   2. Populate ../.env from ../.env.example.
+#   3. Ensure PROXY_URL points to the ext-proxy VM's internal IP:6663.
+#   4. docker compose up -d
+
+services:
+  extension-tee:
+    image: ${EXTENSION_TEE_IMAGE:?EXTENSION_TEE_IMAGE must be set}
+    environment:
+      - MODE=${MODE:-1}
+      - INITIAL_OWNER=${INITIAL_OWNER:?INITIAL_OWNER must be set}
+      - EXTENSION_ID=${EXTENSION_ID:-0x0000000000000000000000000000000000000000000000000000000000000000}
+      - PROXY_URL=${PROXY_URL:?PROXY_URL must be set — internal IP of the ext-proxy VM on port 6663}
+      - CHAIN_URL=${CHAIN_URL:-https://coston2-api.flare.network/ext/C/rpc}
+      - CONFIG_PORT=5501
+      - SIGN_PORT=7701
+      - EXTENSION_PORT=7702
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SIMULATED_TEE=${SIMULATED_TEE:-false}
+      - LOCAL_MODE=${LOCAL_MODE:-false}
+    restart: unless-stopped
+    labels:
+      logging: promtail
+      logging_jobname: "extension-tee"

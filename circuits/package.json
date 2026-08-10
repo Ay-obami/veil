@@ -1,0 +1,28 @@
+{
+  "name": "veil-circuits",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ZK solvency circuit for Veil (Flare Summer Signal hackathon) — see README.md for status and BUILD_NOTES.md for the fork/reuse breakdown.",
+  "scripts": {
+    "test": "mocha test/ --timeout 120000",
+    "compile": "mkdir -p build && circom solvency.circom --r1cs --wasm --sym -o build -l node_modules",
+    "ptau:new": "mkdir -p build/ptau && snarkjs powersoftau new bn128 12 build/ptau/pot12_0000.ptau -v",
+    "ptau:contribute": "snarkjs powersoftau contribute build/ptau/pot12_0000.ptau build/ptau/pot12_0001.ptau --name=\"local contribution\" -v",
+    "ptau:prepare": "snarkjs powersoftau prepare phase2 build/ptau/pot12_0001.ptau build/ptau/pot12_final.ptau -v",
+    "zkey:setup": "snarkjs groth16 setup build/solvency.r1cs build/ptau/pot12_final.ptau build/solvency_0000.zkey",
+    "zkey:contribute": "snarkjs zkey contribute build/solvency_0000.zkey build/solvency_final.zkey --name=\"contributor\" -v",
+    "export:verifier": "snarkjs zkey export solidityverifier build/solvency_final.zkey build/SolvencyVerifier.sol",
+    "export:vkey": "snarkjs zkey export verificationkey build/solvency_final.zkey build/verification_key.json",
+    "build:all": "npm run compile && npm run ptau:new && npm run ptau:contribute && npm run ptau:prepare && npm run zkey:setup && npm run zkey:contribute && npm run export:verifier && npm run export:vkey",
+    "publish:artifacts": "cp build/solvency_js/solvency.wasm artifacts/solvency.wasm && cp build/solvency_final.zkey artifacts/solvency_final.zkey && cp build/verification_key.json artifacts/verification_key.json",
+    "publish:verifier": "echo 'Do NOT run this automatically — see the NOTE below.' && exit 1"
+  },
+  "devDependencies": {
+    "chai": "^4.5.0",
+    "circom_tester": "^0.0.20",
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
+    "mocha": "^10.7.0",
+    "snarkjs": "^0.7.4"
+  }
+}

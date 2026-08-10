@@ -1,0 +1,70 @@
+# Combined reference compose — runs redis, ext-proxy, and extension-tee on a
+# single VM. Useful for smoke-testing the GCP config on a non-Confidential VM
+# before splitting services across machines.
+#
+# For real production, use the split setup:
+#   - gcp-ext-proxy/docker-compose.yaml on a standard GCE VM
+#   - gcp-extension-tee/docker-compose.yaml on a Confidential VM
+
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    mem_limit: 1280m
+    mem_reservation: 512m
+    command: ["redis-server", "--maxmemory", "1gb", "--maxmemory-policy", "volatile-ttl"]
+
+  ext-proxy:
+    image: ${REGISTRY}/tee-proxy:${TEE_PROXY_TAG:-latest}
+    volumes:
+      - ./proxy.config.toml:/app/config/config.toml:ro
+    environment:
+      - PROXY_PRIVATE_KEY=${PROXY_PRIVATE_KEY:?PROXY_PRIVATE_KEY must be set}
+      - DIRECT_API_KEY=${DIRECT_API_KEY:?DIRECT_API_KEY must be set}
+      - INDEXER_DB_HOST=${INDEXER_DB_HOST:?INDEXER_DB_HOST must be set}
+      - INDEXER_DB_PASSWORD=${INDEXER_DB_PASSWORD:?INDEXER_DB_PASSWORD must be set}
+    ports:
+      - "${EXT_PROXY_INTERNAL_BIND:-0.0.0.0:6663}:6663"
+      - "${EXT_PROXY_EXTERNAL_BIND:-0.0.0.0:6664}:6664"
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:6663/healthy"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    labels:
+      logging: promtail
+      logging_jobname: "ext-proxy"
+
+  extension-tee:
+    image: ${EXTENSION_TEE_IMAGE:?EXTENSION_TEE_IMAGE must be set}
+    environment:
+      - MODE=${MODE:-1}
+      - INITIAL_OWNER=${INITIAL_OWNER:?INITIAL_OWNER must be set}
+      - EXTENSION_ID=${EXTENSION_ID:-0x0000000000000000000000000000000000000000000000000000000000000000}
+      - PROXY_URL=http://ext-proxy:6663
+      - CHAIN_URL=${CHAIN_URL:-https://coston2-api.flare.network/ext/C/rpc}
+      - CONFIG_PORT=5501
+      - SIGN_PORT=7701
+      - EXTENSION_PORT=7702
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SIMULATED_TEE=${SIMULATED_TEE:-false}
+      - LOCAL_MODE=${LOCAL_MODE:-false}
+    restart: unless-stopped
+    depends_on:
+      ext-proxy:
+        condition: service_healthy
+    labels:
+      logging: promtail
+      logging_jobname: "extension-tee"

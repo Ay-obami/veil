@@ -1,0 +1,31 @@
+# Coston testnet deployment config.
+#
+# Secrets (DEPLOYMENT_PRIVATE_KEY, PROXY_PRIVATE_KEY, DIRECT_API_KEY) are
+# never set here — export them in your shell before running veil.
+#
+# Coston needs a reachable chain indexer DB for the extension proxy;
+# bring up e2e/docker/coston (coston-indexer-db + coston-indexer) before
+# running `veil deploy extension` against this config.
+
+rpc: https://coston-api.flare.network/ext/C/rpc
+chainId: 16
+localMode: false
+simulatedTee: true
+
+addressesFile: config/coston/deployed-addresses.json
+dockerComposeFile: docker-compose.yaml
+
+# ext-proxy's image is built from a SEPARATE repository (tee-proxy) not
+# included here — set this to a registry that publishes it. See
+# configs/coston2.yaml for the full explanation.
+# registry: registry.gitlab.com/flarenetwork/tee/e2e
+
+teeVersion: v0.1.0
+normalProxyUrl: https://tee-proxy-coston-1.flare.rocks
+extProxyUrl: http://localhost:6674
+waitTimeoutSeconds: 180
+
+initialOwner: ""
+adminAddresses: ""
+
+frontend.port: 5173

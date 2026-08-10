@@ -1,0 +1,51 @@
+# Coston2 testnet deployment config.
+#
+# Secrets (DEPLOYMENT_PRIVATE_KEY, PROXY_PRIVATE_KEY, DIRECT_API_KEY) are
+# never set here — export them in your shell before running veil:
+#   export DEPLOYMENT_PRIVATE_KEY=<funded coston2 key>
+#   export PROXY_PRIVATE_KEY=<proxy signing key>
+#   export DIRECT_API_KEY=<direct-endpoint api key>
+
+rpc: https://coston2-api.flare.network/ext/C/rpc
+chainId: 114
+localMode: false
+simulatedTee: true
+
+addressesFile: config/coston2/deployed-addresses.json
+dockerComposeFile: docker-compose.yaml
+# ext-proxy's image (see docker-compose.yaml) is built from a SEPARATE
+# repository, tee-proxy, that this repo does not include — it must be
+# pulled from a registry. Uncomment and set to wherever your organization
+# publishes it (internal Flare deployments use something like
+# europe-west1-docker.pkg.dev/flare-network-staging/containers — you'll
+# need access to whichever registry you point this at):
+# registry: registry.gitlab.com/flarenetwork/tee/e2e
+
+teeVersion: v0.1.0
+normalProxyUrl: https://tee-proxy-coston2-1.flare.rocks
+# extProxyUrl is normally the local Docker-published port veil itself
+# waits on; only override this if the extension proxy is reachable at a
+# different address (e.g. behind an ngrok tunnel) than where it's run.
+extProxyUrl: http://localhost:6674
+# extProxyHostUrl is the address this machine is registered under on-chain
+# (register-tee -h). The FTDC TEE calls it to run the availability check, so
+# unlike extProxyUrl it must be reachable from the public internet — a
+# localhost value makes the check time out and never publish a result.
+extProxyHostUrl: https://glade-dinghy-phoniness.ngrok-free.dev
+waitTimeoutSeconds: 180
+
+
+# Set your own deployer address here (or leave empty and set
+# DEPLOYMENT_PRIVATE_KEY only — deploy-contract derives it either way).
+initialOwner: ""
+
+# Uncomment and set to use a governance signer set other than the sole
+# deployer/threshold-1 default:
+# governanceSigners: "0xAbc...,0xDef..."
+# governanceThreshold: 2
+
+# Comma-separated admin addresses for the TEE-side extension (can use
+# EXPORT_HISTORY to query other users' data). Typically the deployer.
+adminAddresses: ""
+
+frontend.port: 5173

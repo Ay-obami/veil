@@ -1,0 +1,43 @@
+# Local devnet (Hardhat) deployment config.
+#
+# Secrets (DEPLOYMENT_PRIVATE_KEY, PROXY_PRIVATE_KEY, DIRECT_API_KEY) are
+# never set here — export them in your shell before running veil. Local
+# devnet keys are well-known Hardhat dev keys, so the defaults below
+# match what deploy-contract and docker-compose.yaml already fall back to
+# when those env vars are unset.
+
+rpc: http://127.0.0.1:8545
+chainId: 31337
+localMode: true
+simulatedTee: true
+
+# The local Hardhat devnet's FCC registry (FlareTeeManager, etc.) is
+# deployed by the sibling e2e harness, not by this repo. Point this at
+# wherever that harness wrote deployed-addresses.json — the two paths
+# below are the two monorepo layouts veil has been run from historically:
+#   ../../e2e/docker/sim_dump/deployed-addresses.json
+#   ../docker/sim_dump/deployed-addresses.json
+# Override this if your checkout uses a different layout.
+addressesFile: ../../e2e/docker/sim_dump/deployed-addresses.json
+
+dockerComposeFile: docker-compose.yaml
+
+# ext-proxy's image (see docker-compose.yaml) is built from a SEPARATE
+# repository, tee-proxy, that this repo does not include. "local" means
+# `docker image inspect local/tee-proxy` must already succeed — build it
+# yourself from a tee-proxy checkout (`docker build -t local/tee-proxy
+# <path>`), or point this at a registry that publishes it (see
+# configs/coston2.yaml for that form). `veil doctor` / `veil deploy
+# extension` will tell you clearly if this image isn't available.
+registry: local
+
+teeVersion: v0.1.0
+extProxyUrl: http://localhost:6674
+normalProxyUrl: http://localhost:6662
+waitTimeoutSeconds: 120
+
+# initialOwner defaults to the Hardhat dev deployer if unset here; set it
+# explicitly if your local devnet uses a different funded account.
+initialOwner: "0xF4E021377420Afe90c1A7D2b8968904946633a64"
+
+frontend.port: 5173
