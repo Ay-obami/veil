@@ -19,7 +19,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-const repeats = 15
+const (
+	repeats       = 60              // was 15 — FDC/FTDC attestation rounds typically
+	               	                 // take ~90-180s to finalize; 15×2s=30s budget was
+	                                 // racing (and losing to) the round, not just tunnel warmup
+	pollInterval  = 3 * time.Second // was hardcoded 2s below
+	maxPollInterval = 10 * time.Second
+)
 
 func TeeInfo(nodeURL string) (*types.SignedTeeInfoResponse, error) {
 	result, err := http.Get(nodeURL + "/info")
@@ -89,18 +95,28 @@ func TeeProxyId(teeInfo *types.SignedTeeInfoResponse) (common.Address, common.Ad
 func ActionResult(nodeURL string, actionID common.Hash) (*types.ActionResponse, error) {
 	var result *http.Response
 	var err error
-	for range repeats {
+	interval := pollInterval
+	for i := range repeats {
 		result, err = http.Get(nodeURL + "/action/result/" + actionID.Hex())
 		if err == nil && result.StatusCode == http.StatusOK {
 			break
 		}
-		time.Sleep(2 * time.Second)
+		if err == nil && result.StatusCode != http.StatusOK {
+			logger.Infof("action result not ready yet (attempt %d/%d): status %d for %s",
+				i+1, repeats, result.StatusCode, actionID.Hex())
+			result.Body.Close()
+		}
+		time.Sleep(interval)
+		// gentle backoff so we're not hammering the proxy for 3+ minutes at a fixed rate
+		if interval < maxPollInterval {
+			interval += time.Second
+		}
 	}
 	if err != nil {
 		return nil, errors.Errorf("%s", err)
 	}
 	if result.StatusCode != http.StatusOK {
-		logger.Warnf("action result status not ok: got: %d for %s, %s", result.StatusCode, actionID.Hex(), nodeURL)
+		logger.Warnf("action result status not ok after %d attempts: got: %d for %s, %s", repeats, result.StatusCode, actionID.Hex(), nodeURL)
 		return nil, errors.Errorf("action result status not ok, got: %d", result.StatusCode)
 	}
 	defer result.Body.Close()

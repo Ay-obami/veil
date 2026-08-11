@@ -25,6 +25,14 @@ function faucetAmountFor(symbol: string): string {
   return FAUCET_AMOUNTS[symbol.toUpperCase()] ?? DEFAULT_FAUCET_AMOUNT;
 }
 
+/**
+ * Symbols the testnet faucet can actually mint — i.e. the TestToken
+ * contracts deployed by test-setup. Derived from FAUCET_AMOUNTS so the two
+ * can't drift apart. Pairs whose tokens aren't mintable (e.g. the real FXRP
+ * fAsset, which has no public mint()) are excluded from the faucet.
+ */
+const FAUCETABLE_SYMBOLS = new Set(Object.keys(FAUCET_AMOUNTS));
+
 interface HistoryEntry {
   id: string;
   type: string;
@@ -54,6 +62,11 @@ function getTokens(): TokenEntry[] {
     }
   }
   return tokens;
+}
+
+/** Tokens this deployment's testnet faucet can mint (TestTokens only). */
+function faucetTokens(): TokenEntry[] {
+  return getTokens().filter(t => FAUCETABLE_SYMBOLS.has(t.symbol.toUpperCase()));
 }
 
 function formatAddress(addr: string): string {
@@ -165,7 +178,7 @@ export function WalletModal({ open, onClose }: WalletModalProps) {
     // Resolve the mintable set up front so the tray's steps line up 1:1 with
     // the mints we actually attempt.
     const mintable: { symbol: string; addr: Address; raw: bigint; human: string }[] = [];
-    for (const t of getTokens()) {
+    for (const t of faucetTokens()) {
       const info = tokenInfo[t.address.toLowerCase()];
       if (info?.decimals === undefined) continue;
       const human = faucetAmountFor(t.symbol);
@@ -416,7 +429,7 @@ export function WalletModal({ open, onClose }: WalletModalProps) {
                 <div
                   style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
                 >
-                  {tokens.map(t => (
+                  {faucetTokens().map(t => (
                     <div
                       key={t.address}
                       style={{
