@@ -191,19 +191,22 @@ Requires Go ≥1.25.1 (per `go.mod`).
 
 ## Try It Locally
 
-Bring up the chain, proxy, TEE, and extension in one command:
+Bring up the extension (Docker Compose: redis, ext-proxy, extension-tee in
+simulated mode), deploy the contracts, and run a smoke test in one command:
 
 ```bash
-./scripts/full-setup.sh
+veil deploy all -network coston2
 ```
 
-By default this uses Docker Compose; add `--local` to run everything as
-local Go processes instead. Neither mode needs a sibling `tee-node`
-clone — the build context for Docker is just this repo's own root (see
-`REPRODUCIBILITY.md`), same as the plain `go build` above:
+This compiles the Solidity contracts, deploys `InstructionSender`, registers
+the extension, brings up the Docker stack, registers the TEE, and runs the
+end-to-end smoke check. No sibling `tee-node` checkout is needed — the Docker
+build context is just this repo's own root (see
+[`BUILD_NOTES.md`](BUILD_NOTES.md)). If the run fails partway, continue from
+the last completed stage with:
 
 ```bash
-./scripts/full-setup.sh --local
+veil deploy resume -network coston2
 ```
 
 Then start the frontend:

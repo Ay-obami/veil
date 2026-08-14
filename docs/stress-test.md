@@ -33,7 +33,7 @@ periodically during the run and as a final snapshot on exit.
 
 Before the first run:
 
-1. Extension deployed and registered — `scripts/full-setup.sh`.
+1. Extension deployed and registered — `veil deploy all -network coston2`.
 2. Test tokens deployed — `cd tools && go run ./cmd/test-setup`. This deploys one
    shared `TUSDT` quote token plus one base token per pair (`TFLR`, `TBTC`,
    `TETH`), writes all three pairs to `config/pairs.json`, and writes

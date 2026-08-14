@@ -150,6 +150,9 @@ veil deploy machine -network coston2
 Runs `allow-tee-version` (whitelists the codeHash), `set-governance`,
 `register-tee`, `setExtensionId`, and `setTeeAddress`.
 
+For the full config → tool-flag mapping and post-registration verification,
+see [docs/tee-registration.md](tee-registration.md).
+
 > [!NOTE]
 > Against real hardware (`simulatedTee: false`, which both shipped configs
 > set), `machine` automatically passes `register-tee -command rRap`

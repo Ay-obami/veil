@@ -155,16 +155,17 @@ Only one outbound TEE signature exists in this extension: the withdrawal authori
 
 ## Configuration surface
 
-- **Trading pairs** — loaded from `config/pairs.json` at extension startup, seeded by `tools/cmd/test-setup` during `./scripts/full-setup.sh`. Each pair declares a name, base token address, and quote token address.
+- **Trading pairs** — loaded from `config/pairs.json` at extension startup, seeded by `tools/cmd/test-setup` during `veil deploy contracts`. Each pair declares a name, base token address, and quote token address.
 - **Admin addresses** — `internal/config/config.go` lists admin EOAs. Admins can call `setTeeAddress`, `setKycEnabled`, `allowUser` on the contract, and pass `targetUser` to `EXPORT_HISTORY` for cross-user audit.
 - **Ports** — extension HTTP, sign server, types server. Defaults in `internal/config/config.go`; overrides via env vars.
 
-## Entry points and scripts
+## Entry points
 
-- `./scripts/full-setup.sh --test` — one-shot: pre-build → extension setup (pairs, mint, approve) → docker compose up → post-build (register TEE) → end-to-end test.
-- `./scripts/start-services.sh` — bring services up/down without re-building.
+- `veil deploy all -network coston2` — one-shot deploy: compile + deploy contracts → start Docker stack → register TEE → smoke test.
+- `veil deploy resume -network coston2` — continue from the last completed stage if a run fails partway.
+- `docker compose up -d` — bring services up/down without re-building (image already built).
 - `tools/cmd/stress-test` — multi-persona load generator; see [stress-test.md](stress-test.md).
-- `tools/cmd/test-setup` — deploys test tokens, writes `config/pairs.json`, performs mints and approvals.
+- `tools/cmd/test-setup` — deploys test tokens, writes `config/pairs.json`, performs mints and approvals (run automatically by `veil deploy contracts`).
 
 ## Where to look next
 

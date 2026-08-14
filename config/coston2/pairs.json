@@ -1,26 +1,17 @@
 [
     {
         "name": "FLR/USDT",
-        "baseToken": "0xcF6F4cB8c983d623C9E5947fD9d37cAdD4aaE9C1",
-        "quoteToken": "0x3635Cb375fb0fbdFad888874064d3D5e3D4aA585",
-        "ftsoFeed": "FLR/USD"
+        "baseToken": "0x8a6874212C78969d5FA1B98f05A325a60F4FFB68",
+        "quoteToken": "0x12d97422b97F880264c5e17E44A8E6098a593239"
     },
     {
         "name": "BTC/USDT",
-        "baseToken": "0x8446025e4b00dE11dF56aaEC05b72b71d025D3f7",
-        "quoteToken": "0x3635Cb375fb0fbdFad888874064d3D5e3D4aA585",
-        "ftsoFeed": "BTC/USD"
+        "baseToken": "0x4D0136546d09D3cCb2c9c5C622bD5bBD3fAE3c6F",
+        "quoteToken": "0x12d97422b97F880264c5e17E44A8E6098a593239"
     },
     {
         "name": "ETH/USDT",
-        "baseToken": "0x013d47B383F2630B9BD7151b82915CB7EAd31D0A",
-        "quoteToken": "0x3635Cb375fb0fbdFad888874064d3D5e3D4aA585",
-        "ftsoFeed": "ETH/USD"
-    },
-    {
-        "name": "FXRP/USDT",
-        "baseToken": "0x0b6A3645c240605887a5532109323A3E12273dc7",
-        "quoteToken": "0x3635Cb375fb0fbdFad888874064d3D5e3D4aA585",
-        "ftsoFeed": "XRP/USD"
+        "baseToken": "0x1a85A671bD8489F466012c454b9AF90DbB9ffdBA",
+        "quoteToken": "0x12d97422b97F880264c5e17E44A8E6098a593239"
     }
 ]
