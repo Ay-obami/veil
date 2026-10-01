@@ -1,5 +1,7 @@
 # Orderbook Extension — Testing Guide
 
+> **Current verification status:** the infrastructure-dependent sections below document the historical FCC test workflow. The current repository snapshot is missing the `internal/deploy/` package used by `cmd/veil`, so those setup commands are not a clean-clone verification gate today. For the freshly reproducible no-infrastructure portfolio check, run `./scripts/offline-demo.sh`; it covers orderbook, solvency, extension and race tests without chain or FCC dependencies.
+
 ## Prerequisites
 
 - Full deployment completed (`veil deploy all -network local`, or per-network config)

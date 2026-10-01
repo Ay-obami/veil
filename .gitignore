@@ -55,7 +55,8 @@ logs/
 frontend/.vercel/
 !frontend/book-ui.png
 
-# Local deployment scratch directory
-deploy/
+# Local deployment scratch directory at the repository root only.
+# Keep this anchored so source packages such as internal/deploy are never hidden.
+/deploy/
 # Runtime output (not source)
 results/*.log

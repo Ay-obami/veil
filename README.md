@@ -1,6 +1,6 @@
 # Veil — Confidential OTC Settlement for FAssets
 
-> A private order-matching and settlement layer for FXRP and other FAssets on Flare, built for the Flare Summer Signal hackathon. Matching runs inside a **Flare Confidential Compute (FCC)** TEE, open orders never touch the chain, and withdrawals are authorised by a TEE signature that the on-chain vault verifies before releasing funds. Matches are bounded by a live **FTSO** price band, and this repo is being extended with zero-knowledge solvency proofs so a counterparty can prove sufficient collateral without revealing exact balances.
+> A private order-matching and settlement layer for FXRP and other FAssets on Flare, built for the Flare Summer Signal hackathon. Matching runs inside a **Flare Confidential Compute (FCC)** TEE, open orders never touch the chain, and withdrawals are authorised by a TEE signature that the on-chain vault verifies before releasing funds. When configured, matches are checked against an **FTSO** price band; the current policy is deliberately fail-open if the oracle is absent or unavailable. The repo also includes zero-knowledge solvency proofs so a counterparty can prove sufficient collateral without revealing exact balances.
 
 **This repository started as a fork of [`flare-foundation/fce-orderbook`](https://github.com/flare-foundation/fce-orderbook)**, Flare's own reference implementation of a confidential exchange on FCC — disclosed here and in `BUILD_NOTES.md` rather than hidden. The base gave us a working TEE matching engine, vault contract, and frontend on day one; the FAssets/FTSO price-band integration, and the ZK privacy layer are what's new. See `BUILD_NOTES.md` for the full reused-vs-new breakdown.
 
@@ -15,7 +15,7 @@ The underlying matching engine is deliberately non-trivial: price-time priority 
 - **Private orderbook.** Open orders live only in TEE memory — never on-chain, never in a public mempool, never in the proxy's logs. No book-level MEV, no front-running, no sandwich attacks on resting orders.
 - **Fair, deterministic matching.** Price-time priority, enforced by code that's pinned to a hash registered on-chain. Fills happen instantly inside the TEE — no per-fill gas, no on-chain settlement round trip.
 - **Trust-minimised custody.** An on-chain vault holds tokens. Funds release only when the TEE produces a signed authorisation — and the TEE's signing key never leaves attested hardware and is backed up across data providers, so no single operator can drain the vault.
-- **Uses the full FCC platform.** On-chain instructions for deposits and withdrawals, off-chain direct actions for trading and reads, and outbound TEE signatures for settlement. All three integration paths are used here, end-to-end.
+- **FCC-oriented architecture.** The design uses on-chain instructions for deposits/withdrawals, off-chain direct actions for trading/reads, and outbound TEE signatures for settlement. Earlier hackathon runs exercised this stack, but the current portfolio verification is deliberately offline and does not claim a fresh live FCC end-to-end run.
 
 ---
 
@@ -63,7 +63,7 @@ There are exactly three ways into a TEE and one way back out:
 | In (off-chain) | Frontend → proxy → TEE (a "direct action") | `PLACE_ORDER`, `CANCEL_ORDER`, `GET_MY_STATE`, `GET_BOOK_STATE` — trading and reads |
 | Out | TEE → proxy → user → chain | `executeWithdrawal(sig)` — user presents a TEE-signed authorisation to the vault |
 
-The orderbook, the per-user balance ledger (available + held), and the pending-order state live entirely in the TEE's memory. Nothing is persisted outside of it except the audit trail a user can pull with `EXPORT_HISTORY`.
+The orderbook and pending-order state are in-memory TEE state. The per-user balance ledger is also in-memory by default, but operators can set `BALANCES_PATH` to enable an atomic JSON snapshot on disk for restart recovery; on load, stale held balances are released back to available because open orders themselves are not restored. `EXPORT_HISTORY` remains an explicit user-facing audit export rather than automatic durable order-history storage.
 
 ---
 
@@ -157,7 +157,7 @@ For the exact signature preimage and on-chain verification logic, see [docs/flow
 - **Consensus on inbound instructions.** On-chain `DEPOSIT` and `WITHDRAW` instructions are only executed if signed by data providers holding ≥50% of the current epoch's weight (up to 100 providers per 3.5-day rotation).
 - **Replay protection.** Each withdrawal carries a unique id, generated on-chain. The vault rejects any id it has already executed.
 - **Key resilience.** The TEE's signing key is split across data providers using Shamir secret sharing. Losing a single TEE doesn't leak the key, and the signing identity survives a TEE replacement.
-- **In-memory isolation.** Order state, pending matches, and per-user balances never leave the TEE's attested address space unless a user explicitly exports their own history.
+- **Private execution state.** Orders and pending matches stay inside the TEE process. Balance persistence is optional: when `BALANCES_PATH` is configured, the balance manager writes atomic snapshots to the configured local path. Treat that path as sensitive operator state; it is not public market data.
 
 **What the TEE does not guarantee**
 
@@ -169,60 +169,70 @@ For the exact signature preimage and on-chain verification logic, see [docs/flow
 
 ## Prerequisites
 
-Standard Go setup — no sibling repos needed:
+Requires Go ≥1.25.1 (per `go.mod`). The dependency graph itself is
+self-contained: `github.com/flare-foundation/tee-node` is pinned to a
+published version rather than a local sibling checkout.
+
+For the reproducible portfolio path, run:
 
 ```bash
-go mod tidy
-go build ./...
-go test ./...
+./scripts/offline-demo.sh
 ```
 
-`go.mod` pins `github.com/flare-foundation/tee-node` to a real, published
-tag rather than a local filesystem path, so this builds from a normal
-`git clone` of this repo alone. This wasn't always true — see
-`BUILD_NOTES.md`'s "Side quest: actually trying option 1" section for
-what changed and why, including a documented, deliberate fallback (a
-local sibling-clone pattern, matching upstream `fce-orderbook`'s own
-approach) if this ever needs reverting.
+That command exercises the matching engine, solvency verification and
+extension state plus race checks without FCC, chain RPC, Docker, the proxy,
+or a live FTSO endpoint.
 
-Requires Go ≥1.25.1 (per `go.mod`).
+A full `go build ./...` is **not currently a clean-clone gate**: the
+tracked `cmd/veil` deployment CLI imports `veil/internal/deploy`, but
+that deployment-engine source package is absent from this repository
+snapshot. The older unanchored `deploy/` ignore rule could also hide
+`internal/deploy/`; it is now anchored to `/deploy/` so future source
+cannot be silently omitted. Restoring the original deployment package is
+parked separately from the verified offline case study.
 
 ---
 
 ## Try It Locally
 
-Bring up the extension (Docker Compose: redis, ext-proxy, extension-tee in
-simulated mode), deploy the contracts, and run a smoke test in one command:
+The reproducible no-infrastructure demo is:
 
 ```bash
-veil deploy all -network coston2
+./scripts/offline-demo.sh
 ```
 
-This compiles the Solidity contracts, deploys `InstructionSender`, registers
-the extension, brings up the Docker stack, registers the TEE, and runs the
-end-to-end smoke check. No sibling `tee-node` checkout is needed — the Docker
-build context is just this repo's own root (see
-[`BUILD_NOTES.md`](BUILD_NOTES.md)). If the run fails partway, continue from
-the last completed stage with:
+It requires only the Go toolchain and does not submit transactions or depend
+on FCC, a proxy, Docker, chain RPC, or a live FTSO endpoint.
 
-```bash
-veil deploy resume -network coston2
-```
+The repository also contains Docker/FCC deployment documentation and the
+tracked `cmd/veil` CLI entry point. Those describe the larger hackathon
+deployment workflow, but the corresponding `internal/deploy` source package
+is missing from the current repository snapshot. Treat `veil deploy all` /
+`veil deploy resume` as **historical/parked workflow documentation**, not
+as a clean-clone command that this revision claims to reproduce.
 
-Then start the frontend:
-
-```bash
-cd frontend && npm install && npm run dev
-```
-
-Open `http://localhost:5173`. The footer shows **NETWORK COSTON2** and **TEE ONLINE** when everything is connected. Use the in-app faucet to get test tokens, deposit into the vault, and place your first order.
+The frontend source remains under `frontend/`; a fresh frontend install and
+live proxy round-trip are outside this bounded offline verification pass.
 
 ---
 
 ## Testing
 
-- **Unit and end-to-end tests** — `go test ./...` plus a scripted E2E runner. See [docs/testing.md](docs/testing.md).
-- **Stress and soak** — a multi-persona load generator with tiers ranging from a one-minute smoke to multi-day soak runs with live price oracles. See [docs/stress-test.md](docs/stress-test.md).
+- **Reproducible offline gate** — `./scripts/offline-demo.sh`: focused
+  orderbook, solvency and extension tests plus race detection for matching and
+  extension state.
+- **Focused extension suite** — freshly observed as 27 tests passed, 0 skipped,
+  0 failed on Go 1.25.1.
+- **Full module build** — currently blocked by the missing
+  `veil/internal/deploy` package imported by `cmd/veil`; do not report
+  `go test ./...` as green until that source is restored.
+- **Live FCC / stress / soak** — infrastructure-dependent and not freshly
+  replayed in this portfolio pass. See [docs/testing.md](docs/testing.md) and
+  [docs/stress-test.md](docs/stress-test.md) for the historical workflow and
+  prerequisites.
+
+For the exact safe claims and parked work, see
+[`docs/portfolio-checklist.md`](docs/portfolio-checklist.md).
 
 ---
 
