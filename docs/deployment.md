@@ -1,5 +1,7 @@
 # Deployment engine
 
+> **Repository snapshot status:** this document records the deployment engine that was used during the hackathon, but the current Git tree does not contain the referenced `internal/deploy/` source package. `cmd/veil` therefore does not build from a clean clone today. Treat the commands below as historical/parked operational documentation until that original package is restored; the bounded reproducible portfolio path is `./scripts/offline-demo.sh`.
+
 `veil` is a small, state-driven CLI that deploys the extension: it replaces
 the old `scripts/use-chain.sh` / `pre-build.sh` / `post-build.sh` / `test.sh`
 orchestration (plus the `extension-setup.sh` / `extension-post-setup.sh`
